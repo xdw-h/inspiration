@@ -17,4 +17,23 @@ describe('recorder service', () => {
     const service = createRecorderService({ getUserMedia: vi.fn() } as never, undefined)
     await expect(service.start()).rejects.toThrow('当前浏览器不支持录音')
   })
+
+  it('reports an unexpected browser interruption', async () => {
+    let instance: FakeRecorder | undefined
+    class FakeRecorder extends EventTarget {
+      static isTypeSupported() { return true }
+      state: RecordingState = 'inactive'; mimeType = 'audio/webm'
+      constructor() { super(); instance = this }
+      start() { this.state = 'recording' }
+      pause() { this.state = 'paused' }
+      resume() { this.state = 'recording' }
+      stop() { this.state = 'inactive'; this.dispatchEvent(new Event('stop')) }
+    }
+    const interrupted = vi.fn()
+    const devices = { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [{ stop: vi.fn() }] }) }
+    const service = createRecorderService(devices as never, FakeRecorder as never, undefined, { onInterrupted: interrupted })
+    await service.start()
+    instance!.stop()
+    expect(interrupted).toHaveBeenCalledOnce()
+  })
 })

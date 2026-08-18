@@ -3,5 +3,6 @@ import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   plugins: [vue()],
-  test: { environment: 'jsdom' },
+  build: { manifest: true },
+  test: { environment: 'jsdom', include: ['tests/unit/**/*.spec.ts'] },
 })

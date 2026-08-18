@@ -6,13 +6,17 @@ import { db } from '../shared/db/database'
 import { formatDateTimeMinute } from '../shared/format/date'
 import { filterIdeas, type SearchableIdea } from '../features/ideas/ideaSearch'
 import type { IdeaStatus, TagEntity } from '../features/ideas/types'
+import { createLocalContentRepository } from '../features/storage/localContentRepository'
+import { storeToRefs } from 'pinia'
+import { useIdeaFilterStore } from '../features/ideas/ideaFilterStore'
 
 const repository = createIdeaRepository(db)
+const contentRepository = createLocalContentRepository(db)
 const ideas = ref<(IdeaEntity & SearchableIdea)[]>([])
-const query = ref('')
-const tags = ref<TagEntity[]>([]); const tagId = ref(''); const status = ref<IdeaStatus | ''>(''); const type = ref<'text' | 'voice' | ''>(''); const favoriteOnly = ref(false)
+const filterStore = useIdeaFilterStore(); const { query, tagId, status, type, favoriteOnly } = storeToRefs(filterStore)
+const tags = ref<TagEntity[]>([])
 const visibleIdeas = computed(() => filterIdeas(ideas.value, { query: query.value, tagId: tagId.value, status: status.value, type: type.value, favoriteOnly: favoriteOnly.value }))
-async function load() { const [items, transcripts, audios, tagItems] = await Promise.all([repository.list(), db.transcripts.toArray(), db.audioAssets.toArray(), db.tags.orderBy('order').toArray()]); const transcriptMap = new Map(transcripts.map((item) => [item.ideaId, item.text])); const audioIds = new Set(audios.map((item) => item.ideaId)); tags.value = tagItems; ideas.value = items.map((item) => ({ ...item, transcript: transcriptMap.get(item.id) ?? '', hasAudio: audioIds.has(item.id) })) }
+async function load() { const [items, browse] = await Promise.all([repository.list(), contentRepository.getBrowseData()]); tags.value = browse.tags; ideas.value = items.map((item) => ({ ...item, transcript: browse.transcriptByIdea.get(item.id) ?? '', hasAudio: browse.audioIdeaIds.has(item.id) })) }
 onMounted(load); onActivated(load)
 </script>
 <template><main class="page ideas-page"><header><div><h1>灵感</h1><p>随手记下每一个闪光时刻。</p></div><span>{{ visibleIdeas.length }}</span></header><input v-model="query" class="search" aria-label="搜索灵感" placeholder="搜索标题、正文或转写" /><div class="filters"><select v-model="type" aria-label="记录类型"><option value="">全部类型</option><option value="text">文字</option><option value="voice">语音</option></select><select v-model="status" aria-label="灵感状态"><option value="">全部状态</option><option value="inbox">待整理</option><option value="active">进行中</option><option value="done">已完成</option><option value="archived">已归档</option></select><select v-model="tagId" aria-label="标签筛选"><option value="">全部标签</option><option v-for="tag in tags" :key="tag.id" :value="tag.id">{{ tag.name }}</option></select><label><input v-model="favoriteOnly" type="checkbox" /> 仅收藏</label></div><section v-if="visibleIdeas.length" class="idea-list"><RouterLink v-for="idea in visibleIdeas" :key="idea.id" :to="`/idea/${idea.id}`"><small>{{ idea.hasAudio ? '🎙 ' : '✎ ' }}{{ idea.favorite ? '★ ' : '' }}{{ idea.status === 'inbox' ? '待整理' : idea.status === 'active' ? '进行中' : idea.status === 'done' ? '已完成' : '已归档' }}</small><h2>{{ idea.title || idea.body.slice(0, 24) || idea.transcript.slice(0, 24) || '语音灵感' }}</h2><p>{{ idea.body || idea.transcript || '暂无文字内容' }}</p><time>{{ formatDateTimeMinute(idea.updatedAt) }}</time></RouterLink></section><section v-else class="empty"><strong>{{ ideas.length ? '没有匹配的灵感' : '还没有灵感' }}</strong><p>{{ ideas.length ? '尝试清空筛选条件。' : '从一段文字开始记录。' }}</p><RouterLink v-if="!ideas.length" to="/idea/new">记录第一条灵感</RouterLink></section></main></template>

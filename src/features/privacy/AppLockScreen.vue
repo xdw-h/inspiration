@@ -1,0 +1,8 @@
+<script setup lang="ts">
+import { ref } from 'vue'
+import { appLock, appUnlocked } from './appLockStore'
+const pin = ref(''); const error = ref(''); const busy = ref(false)
+async function unlock() { busy.value = true; try { if (await appLock.verify(pin.value)) { appUnlocked.value = true; pin.value = ''; error.value = '' } else { error.value = '密码错误，请重试'; pin.value = '' } } finally { busy.value = false } }
+</script>
+<template><main class="lock-screen"><div class="lock-card"><span>✦</span><h1>灵感已锁定</h1><p>输入 6 位数字密码继续。</p><form @submit.prevent="unlock"><input v-model="pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" aria-label="应用锁密码" /><button type="submit" :disabled="pin.length !== 6 || busy">{{ busy ? '验证中…' : '解锁' }}</button></form><p v-if="error" class="error" role="alert">{{ error }}</p></div></main></template>
+<style scoped>.lock-screen{position:fixed;z-index:100;inset:0;padding:24px;display:grid;place-items:center;background:#fff8f4}.lock-card{width:min(100%,360px);padding:30px 22px;display:grid;justify-items:center;gap:12px;border:1px solid #eaded7;border-radius:24px;background:#fff;box-shadow:0 20px 50px rgba(87,57,39,.12)}.lock-card>span{width:58px;height:58px;display:grid;place-items:center;border-radius:18px;background:#fff0eb;color:var(--primary);font-size:28px}.lock-card h1,.lock-card p{margin:0}.lock-card p{color:#8f8580;font-size:13px}.lock-card form{width:100%;display:grid;gap:10px}.lock-card input{min-height:50px;border:1px solid #eaded7;border-radius:13px;text-align:center;font-size:24px;letter-spacing:10px}.lock-card button{min-height:48px;border:0;border-radius:13px;background:var(--primary);color:#fff;font-weight:700}.lock-card .error{color:#c94d42}</style>

@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import { InspirationDatabase } from '../../src/shared/db/database'
 import { exportBackup, importBackup } from '../../src/features/backup/backupService'
+import JSZip from 'jszip'
 
 if (typeof globalThis.CustomEvent === 'undefined') {
   globalThis.CustomEvent = class<T = unknown> extends Event {
@@ -13,6 +14,10 @@ if (typeof globalThis.CustomEvent === 'undefined') {
 }
 
 describe('backup', () => {
+  async function backupBlob(manifest: object, data: object, files: Record<string, string> = {}) {
+    const zip = new JSZip(); zip.file('manifest.json', JSON.stringify(manifest)); zip.file('ideas.json', JSON.stringify(data)); Object.entries(files).forEach(([name, value]) => zip.file(name, value))
+    return new Blob([await zip.generateAsync({ type: 'uint8array' })], { type: 'application/zip' })
+  }
   it('round-trips ideas and audio', async () => {
     const source = new InspirationDatabase(`source-${randomUUID()}`)
     const target = new InspirationDatabase(`target-${randomUUID()}`)
@@ -29,5 +34,26 @@ describe('backup', () => {
     await expect(importBackup(new Blob(['broken']), target)).rejects.toThrow('备份文件损坏或格式不正确')
     expect(await target.ideas.count()).toBe(0)
     await target.delete()
+  })
+
+  it('rejects incompatible versions and missing audio before writing', async () => {
+    const target = new InspirationDatabase(`target-${randomUUID()}`)
+    const empty = { ideas: [], tags: [], transcripts: [], audio: [] }
+    await expect(importBackup(await backupBlob({ version: 2, createdAt: '', ideas: 0, audio: 0 }, empty), target)).rejects.toThrow('备份版本不兼容')
+    const idea = { id: 'i1', title: '', body: '', status: 'inbox', favorite: false, tagIds: [], createdAt: '', updatedAt: '' }
+    const audio = { id: 'a1', ideaId: 'i1', mimeType: 'audio/webm', size: 1, durationMs: 1, createdAt: '', file: 'audio/a1.webm' }
+    await expect(importBackup(await backupBlob({ version: 1, createdAt: '', ideas: 1, audio: 1 }, { ideas: [idea], tags: [], transcripts: [], audio: [audio] }), target)).rejects.toThrow('备份缺少音频')
+    expect(await target.ideas.count()).toBe(0)
+    await target.delete()
+  })
+
+  it('skips duplicate ideas on repeated import', async () => {
+    const source = new InspirationDatabase(`source-${randomUUID()}`); const target = new InspirationDatabase(`target-${randomUUID()}`)
+    await source.ideas.add({ id: 'same', title: '重复', body: '内容', status: 'inbox', favorite: false, tagIds: [], createdAt: '', updatedAt: '' })
+    const backup = await exportBackup(source)
+    expect(await importBackup(backup, target)).toMatchObject({ imported: 1, skipped: 0 })
+    expect(await importBackup(backup, target)).toMatchObject({ imported: 0, skipped: 1 })
+    expect(await target.ideas.count()).toBe(1)
+    await source.delete(); await target.delete()
   })
 })

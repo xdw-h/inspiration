@@ -21,4 +21,11 @@ describe('tag repository', () => {
     await repository.remove(tag.id)
     expect((await database.ideas.get('idea-1'))?.tagIds).toEqual([])
   })
+
+  it('moves tags and persists their order', async () => {
+    const repository = createTagRepository(database)
+    const first = await repository.create('一', '#111111'); const second = await repository.create('二', '#222222')
+    await repository.move(second.id, -1)
+    expect((await repository.list()).map((tag) => tag.id)).toEqual([second.id, first.id])
+  })
 })

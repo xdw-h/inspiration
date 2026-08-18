@@ -35,5 +35,11 @@ export function createTagRepository(database: InspirationDatabase) {
         await database.tags.delete(id)
       })
     },
+    async move(id: string, direction: -1 | 1) {
+      const tags = await database.tags.orderBy('order').toArray(); const index = tags.findIndex((tag) => tag.id === id); const target = index + direction
+      if (index < 0) throw new Error('标签不存在'); if (target < 0 || target >= tags.length) return
+      const current = tags[index]; const other = tags[target]
+      await database.transaction('rw', database.tags, async () => { await database.tags.update(current.id, { order: other.order }); await database.tags.update(other.id, { order: current.order }) })
+    },
   }
 }
