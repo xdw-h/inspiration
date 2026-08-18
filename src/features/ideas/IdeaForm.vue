@@ -2,14 +2,14 @@
 import { reactive, ref, watch } from 'vue'
 import type { IdeaDraft, IdeaStatus } from './types'
 
-const props = withDefaults(defineProps<{ initial?: Partial<IdeaDraft>; busy?: boolean }>(), { initial: () => ({}), busy: false })
+const props = withDefaults(defineProps<{ initial?: Partial<IdeaDraft>; busy?: boolean; allowEmptyBody?: boolean }>(), { initial: () => ({}), busy: false, allowEmptyBody: false })
 const emit = defineEmits<{ save: [draft: IdeaDraft]; change: [draft: IdeaDraft] }>()
 const form = reactive<IdeaDraft>({ title: props.initial.title ?? '', body: props.initial.body ?? '', status: props.initial.status ?? 'inbox', favorite: props.initial.favorite ?? false, tagIds: [...(props.initial.tagIds ?? [])] })
 const error = ref('')
 watch(form, () => emit('change', { ...form, tagIds: [...form.tagIds] }), { deep: true })
 function submit() {
   const draft = { ...form, title: form.title.trim(), body: form.body.trim(), tagIds: [...form.tagIds] }
-  if (!draft.body) { error.value = '请输入灵感内容'; return }
+  if (!draft.body && !props.allowEmptyBody) { error.value = '请输入灵感内容'; return }
   error.value = ''
   emit('save', draft)
 }
