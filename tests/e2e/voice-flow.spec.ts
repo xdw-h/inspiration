@@ -1,8 +1,10 @@
 import { expect, test } from '@playwright/test'
+import { dismissReleaseNotes } from './helpers'
 
 test('records, previews and saves a voice idea', async ({ page, context }) => {
   await context.grantPermissions(['microphone'])
   await page.goto('/')
+  await dismissReleaseNotes(page)
   await page.getByLabel('新增灵感').click()
   await page.getByRole('button', { name: '语音记录' }).click()
   await page.getByLabel('开始录音').click()

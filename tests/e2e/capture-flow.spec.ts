@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test'
+import { dismissReleaseNotes } from './helpers'
 
 test('creates, reloads, searches, edits and deletes a text idea', async ({ page }) => {
   await page.goto('/')
+  await dismissReleaseNotes(page)
   await page.getByLabel('新增灵感').click()
   await page.getByLabel('灵感标题').fill('散步灵感')
   await page.getByLabel('灵感正文').fill('散步时想到的产品点子')

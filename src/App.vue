@@ -1,12 +1,17 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import AppLockScreen from './features/privacy/AppLockScreen.vue'
 import { appUnlocked, lockApp } from './features/privacy/appLockStore'
 import { applyPwaUpdate, pwaUpdateAvailable } from './features/pwa/pwaUpdate'
+import ReleaseNotesSheet from './features/releaseNotes/ReleaseNotesSheet.vue'
+import { markLatestReleaseViewed, shouldShowLatestRelease } from './features/releaseNotes/releaseNotes'
 
 const route = useRoute()
 const hideNav = computed(() => Boolean(route.meta.hideNav))
+const showReleaseNotes = ref(false)
+watch(appUnlocked, (unlocked) => { if (unlocked && shouldShowLatestRelease()) showReleaseNotes.value = true }, { immediate: true })
+function closeReleaseNotes() { markLatestReleaseViewed(); showReleaseNotes.value = false }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') lockApp() })
 </script>
 
@@ -14,6 +19,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
   <div class="app-shell" :class="{ 'without-nav': hideNav }">
     <AppLockScreen v-if="!appUnlocked" />
     <RouterView v-else />
+    <ReleaseNotesSheet v-if="appUnlocked && showReleaseNotes" @close="closeReleaseNotes" />
     <aside v-if="appUnlocked && pwaUpdateAvailable" class="update-toast" role="status"><span><strong>发现新版本</strong><small>更新后即可使用最新功能</small></span><button type="button" @click="applyPwaUpdate">立即更新</button></aside>
     <nav v-if="!hideNav" class="bottom-nav" aria-label="主导航">
       <svg class="bottom-nav__outline" viewBox="0 0 430 128" preserveAspectRatio="none" aria-hidden="true"><path d="M22 60 H163 C180 60 190 34 215 34 C240 34 250 60 267 60 H408 Q418 60 418 70 V111 Q418 121 408 121 H22 Q12 121 12 111 V70 Q12 60 22 60 Z" /></svg>
