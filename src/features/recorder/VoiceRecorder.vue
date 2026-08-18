@@ -3,16 +3,16 @@ import { computed, onBeforeUnmount, ref } from 'vue'
 import { createRecorderService, type RecordedAudio } from './recorderService'
 
 const props = withDefaults(defineProps<{ supported?: boolean }>(), { supported: () => typeof MediaRecorder !== 'undefined' && Boolean(navigator.mediaDevices?.getUserMedia) })
-const emit = defineEmits<{ recorded: [audio: RecordedAudio]; cancel: [] }>()
+const emit = defineEmits<{ recorded: [audio: RecordedAudio]; cancel: []; started: []; stopped: [] }>()
 const state = ref<'idle' | 'recording' | 'paused' | 'preview'>('idle')
 const seconds = ref(0); const error = ref(''); const previewUrl = ref('')
 let timer: ReturnType<typeof setInterval> | undefined
 let service = createRecorderService()
 const timeLabel = computed(() => `${String(Math.floor(seconds.value / 60)).padStart(2, '0')}:${String(seconds.value % 60).padStart(2, '0')}`)
 function clearTimer() { clearInterval(timer); timer = undefined }
-async function start() { error.value = ''; try { service = createRecorderService(); await service.start(); state.value = 'recording'; seconds.value = 0; timer = setInterval(() => seconds.value += 1, 1000) } catch (value) { error.value = value instanceof Error ? value.message : '录音启动失败' } }
+async function start() { error.value = ''; try { service = createRecorderService(); await service.start(); state.value = 'recording'; seconds.value = 0; timer = setInterval(() => seconds.value += 1, 1000); emit('started') } catch (value) { error.value = value instanceof Error ? value.message : '录音启动失败' } }
 function togglePause() { if (state.value === 'recording') { service.pause(); state.value = 'paused'; clearTimer() } else { service.resume(); state.value = 'recording'; timer = setInterval(() => seconds.value += 1, 1000) } }
-async function finish() { try { const audio = await service.stop(); clearTimer(); URL.revokeObjectURL(previewUrl.value); previewUrl.value = URL.createObjectURL(audio.blob); state.value = 'preview'; emit('recorded', audio) } catch (value) { error.value = value instanceof Error ? value.message : '录音保存失败' } }
+async function finish() { try { const audio = await service.stop(); clearTimer(); URL.revokeObjectURL(previewUrl.value); previewUrl.value = URL.createObjectURL(audio.blob); state.value = 'preview'; emit('stopped'); emit('recorded', audio) } catch (value) { error.value = value instanceof Error ? value.message : '录音保存失败' } }
 function cancel() { service.cancel(); clearTimer(); state.value = 'idle'; seconds.value = 0; emit('cancel') }
 onBeforeUnmount(() => { service.cancel(); clearTimer(); URL.revokeObjectURL(previewUrl.value) })
 </script>
