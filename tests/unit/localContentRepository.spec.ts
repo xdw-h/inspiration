@@ -25,4 +25,30 @@ describe('local content repository', () => {
     expect(data.transcriptByIdea.get('i1')).toBe('转写')
     expect(data.audioIdeaIds.has('i1')).toBe(true)
   })
+
+  it('creates an idea with voice assets and clears the draft atomically', async () => {
+    const repository = createLocalContentRepository(database)
+    await repository.saveDraft({ title: '草稿', body: '', audioChunks: [new Blob(['part'])] })
+    const idea = await repository.createIdeaWithAssets(
+      { title: '语音灵感', body: '', status: 'inbox', favorite: false, tagIds: [] },
+      { id: 'a1', blob: new Blob(['audio']), mimeType: 'audio/webm', size: 5, durationMs: 100, createdAt: '2026-08-18T00:00:00Z' },
+      { id: 't1', text: '转写内容', status: 'completed', manuallyEdited: false, updatedAt: '2026-08-18T00:00:00Z' },
+    )
+    expect(await database.ideas.get(idea.id)).toBeTruthy()
+    expect((await repository.getAssets(idea.id)).audio?.id).toBe('a1')
+    expect(await repository.getDraft()).toBeUndefined()
+  })
+
+  it('rolls back the idea and keeps the draft when a voice asset fails', async () => {
+    const repository = createLocalContentRepository(database)
+    await database.audioAssets.add({ id: 'duplicate', ideaId: 'old', blob: new Blob(['old']), mimeType: 'audio/webm', size: 3, durationMs: 1, createdAt: '2026-08-18T00:00:00Z' })
+    await repository.saveDraft({ title: '草稿', body: '', audioChunks: [new Blob(['part'])] })
+    await expect(repository.createIdeaWithAssets(
+      { title: '不应提交', body: '', status: 'inbox', favorite: false, tagIds: [] },
+      { id: 'duplicate', blob: new Blob(['new']), mimeType: 'audio/webm', size: 3, durationMs: 1, createdAt: '2026-08-18T00:00:00Z' },
+      undefined,
+    )).rejects.toBeTruthy()
+    expect(await database.ideas.count()).toBe(0)
+    expect(await repository.getDraft()).toBeTruthy()
+  })
 })

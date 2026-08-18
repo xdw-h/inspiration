@@ -17,7 +17,7 @@ export function createRecorderService(
   mediaDevices: Pick<MediaDevices, 'getUserMedia'> = navigator.mediaDevices,
   Recorder: RecorderConstructor | undefined = globalThis.MediaRecorder,
   onChunk?: (chunk: Blob) => void,
-  options: { onInterrupted?: () => void } = {},
+  options: { onInterrupted?: () => void; beforeStart?: () => Promise<void> | void } = {},
 ) {
   let recorder: MediaRecorder | null = null
   let stream: MediaStream | null = null
@@ -32,7 +32,8 @@ export function createRecorderService(
     async start() {
       if (!Recorder) throw new Error('当前浏览器不支持录音，请改用文字记录')
       try { stream = await mediaDevices.getUserMedia({ audio: true }) } catch (error) { throw new Error(messageFor(error)) }
-      chunks = []; pausedDuration = 0; startedAt = Date.now()
+      try { await options.beforeStart?.() } catch (error) { release(); throw error }
+      intentionalStop = false; chunks = []; pausedDuration = 0; startedAt = Date.now()
       const mimeType = chooseAudioMimeType(Recorder.isTypeSupported.bind(Recorder))
       recorder = mimeType ? new Recorder(stream, { mimeType }) : new Recorder(stream)
       recorder.addEventListener('dataavailable', (event: BlobEvent) => { if (event.data.size) { chunks.push(event.data); onChunk?.(event.data) } })

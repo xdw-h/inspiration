@@ -1,4 +1,5 @@
-const CACHE = 'inspiration-shell-v1'
+const BUILD_VERSION = '__BUILD_VERSION__'
+const CACHE = `inspiration-shell-${BUILD_VERSION}`
 const BASE = new URL('./', self.registration.scope).pathname
 const SHELL = [BASE, `${BASE}index.html`, `${BASE}manifest.webmanifest`, `${BASE}icon.svg`]
 

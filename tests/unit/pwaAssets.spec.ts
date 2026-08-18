@@ -9,5 +9,7 @@ describe('PWA assets', () => {
     expect(manifest.start_url).toBe('./')
     expect(worker).toContain("event.request.mode === 'navigate'")
     expect(worker).toContain("caches.match(`${BASE}index.html`)")
+    expect(worker).toContain('__BUILD_VERSION__')
+    expect(worker).toContain('inspiration-shell-${BUILD_VERSION}')
   })
 })
