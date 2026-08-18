@@ -19,15 +19,15 @@ onBeforeUnmount(() => { service.cancel(); clearTimer(); URL.revokeObjectURL(prev
 </script>
 
 <template>
-  <section class="voice-recorder" aria-label="语音记录">
+  <section class="voice-recorder" :class="{ active: state === 'recording' || state === 'paused' }" aria-label="语音记录">
     <p v-if="!supported" class="fallback">当前浏览器不支持录音，请改用文字记录。</p>
     <template v-else>
       <div class="timer"><i :class="state" /> <strong>{{ timeLabel }}</strong><span>{{ state === 'recording' ? '正在录音' : state === 'paused' ? '已暂停' : state === 'preview' ? '录音已保存' : '准备录音' }}</span></div>
       <audio v-if="previewUrl" :src="previewUrl" controls />
-      <div class="recorder-actions">
+      <div class="recorder-actions" :class="{ 'recording-dock': state === 'recording' || state === 'paused' }">
         <button v-if="state === 'idle' || state === 'preview'" type="button" aria-label="开始录音" @click="start">{{ state === 'preview' ? '重新录音' : '开始录音' }}</button>
-        <button v-if="state === 'recording' || state === 'paused'" type="button" @click="togglePause">{{ state === 'recording' ? '暂停' : '继续' }}</button>
-        <button v-if="state === 'recording' || state === 'paused'" class="finish" type="button" @click="finish">结束录音</button>
+        <button v-if="state === 'recording' || state === 'paused'" type="button" :aria-label="state === 'recording' ? '暂停录音' : '继续录音'" @click="togglePause">{{ state === 'recording' ? '暂停' : '继续' }}</button>
+        <button v-if="state === 'recording' || state === 'paused'" class="finish" type="button" aria-label="结束录音" @click="finish">结束录音</button>
         <button v-if="state !== 'idle'" type="button" @click="cancel">取消</button>
       </div>
     </template>
@@ -36,5 +36,5 @@ onBeforeUnmount(() => { service.cancel(); clearTimer(); URL.revokeObjectURL(prev
 </template>
 
 <style scoped>
-.voice-recorder{padding:18px;display:grid;gap:14px;border:1px solid #eaded7;border-radius:18px;background:#fff8f4}.timer{display:grid;grid-template-columns:12px auto 1fr;align-items:center;gap:9px}.timer i{width:10px;height:10px;border-radius:50%;background:#c8bdb7}.timer i.recording{background:#e25349;box-shadow:0 0 0 5px #ffe5e1}.timer strong{font-size:26px}.timer span{color:#8f8580;font-size:12px}.voice-recorder audio{width:100%}.recorder-actions{display:flex;gap:8px;flex-wrap:wrap}.recorder-actions button{min-height:44px;padding:0 14px;border:1px solid #eaded7;border-radius:12px;background:#fff}.recorder-actions .finish{background:var(--primary);color:white}.fallback,.voice-recorder [role=alert]{margin:0;color:#b84e44;font-size:13px}
+.voice-recorder{padding:18px;display:grid;gap:14px;border:1px solid #eaded7;border-radius:18px;background:#fff8f4}.voice-recorder.active{padding-bottom:88px}.timer{display:grid;grid-template-columns:12px auto 1fr;align-items:center;gap:9px}.timer i{width:10px;height:10px;border-radius:50%;background:#c8bdb7}.timer i.recording{background:#e25349;box-shadow:0 0 0 5px #ffe5e1}.timer strong{font-size:26px}.timer span{color:#8f8580;font-size:12px}.voice-recorder audio{width:100%}.recorder-actions{display:flex;gap:8px;flex-wrap:wrap}.recorder-actions button{min-height:44px;padding:0 14px;border:1px solid #eaded7;border-radius:12px;background:#fff}.recorder-actions .finish{background:var(--primary);color:white}.recording-dock{position:fixed;z-index:60;bottom:calc(12px + var(--safe-bottom));left:50%;width:min(calc(100% - 24px),406px);padding:10px;display:grid;grid-template-columns:1fr 1.35fr 1fr;transform:translateX(-50%);border:1px solid #eaded7;border-radius:16px;background:rgba(255,250,247,.98);box-shadow:0 12px 34px rgba(87,57,39,.2);backdrop-filter:blur(12px)}.recording-dock button{min-width:0;padding:0 8px;font-weight:700}.recording-dock .finish{order:2}.recording-dock button:first-child{order:1}.recording-dock button:last-child{order:3}.fallback,.voice-recorder [role=alert]{margin:0;color:#b84e44;font-size:13px}
 </style>
