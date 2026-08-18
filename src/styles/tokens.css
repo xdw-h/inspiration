@@ -1,0 +1,8 @@
+:root {
+  font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  color: #312c2a;
+  background: #fffaf6;
+  --primary: #f47f70;
+  --surface: #fff;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
